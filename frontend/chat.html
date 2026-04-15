@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - MindfulChat</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="chat-body">
+    <div class="chat-container">
+        <!-- Sidebar -->
+        <aside class="chat-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <span class="logo">🧠</span>
+                    <span class="brand-name">MindfulChat</span>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <div class="user-info">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-details">
+                        <h3 id="userName">User</h3>
+                        <p id="userEmail">user@example.com</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-menu">
+                    <button class="menu-item active">
+                        <span class="menu-icon">💬</span>
+                        <span>Current Chat</span>
+                    </button>
+                    <button class="menu-item" onclick="clearChat()">
+                        <span class="menu-icon">🗑️</span>
+                        <span>Clear History</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">
+                    <span class="menu-icon">🚪</span>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <div class="chat-header-bar">
+                <div class="chat-header-info">
+                    <h2>Your Mental Health Assistant</h2>
+                    <p class="status">
+                        <span class="status-dot"></span>
+                        Online
+                    </p>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <div class="welcome-icon">🤗</div>
+                    <h3>Welcome to MindfulChat</h3>
+                    <p>I'm here to listen and support you. Feel free to share what's on your mind.</p>
+                    <div class="suggestions">
+                        <button class="suggestion-btn" onclick="sendSuggestion('I\'m feeling anxious')">
+                            I'm feeling anxious
+                        </button>
+                        <button class="suggestion-btn" onclick="sendSuggestion('I need someone to talk to')">
+                            I need someone to talk to
+                        </button>
+                        <button class="suggestion-btn" onclick="sendSuggestion('I\'m having trouble sleeping')">
+                            I'm having trouble sleeping
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="typing-indicator hidden" id="typingIndicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+
+            <div class="chat-input-area">
+                <form id="chatForm" class="chat-input-form">
+                    <textarea 
+                        id="messageInput" 
+                        class="chat-input" 
+                        placeholder="Type your message here..."
+                        rows="1"
+                    ></textarea>
+                    <button type="submit" class="send-btn" id="sendBtn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </form>
+                <p class="input-hint">Press Enter to send, Shift+Enter for new line</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        const chatMessages = document.getElementById('chatMessages');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        // Handle Enter key
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // Load welcome message on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            loadUserProfile();
+            await loadWelcome();
+        });
+
+        function loadUserProfile() {
+            const name = localStorage.getItem('mindfulchat_user_name');
+            const email = localStorage.getItem('mindfulchat_user_email');
+            if (name) {
+                document.getElementById('userName').textContent = name;
+            }
+            if (email) {
+                document.getElementById('userEmail').textContent = email;
+            }
+        }
+
+        async function loadWelcome() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/welcome`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const welcomeBubble = document.querySelector('.welcome-message p');
+                    if (welcomeBubble && data.message) {
+                        welcomeBubble.textContent = data.message;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load welcome:', error);
+            }
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            // Show typing indicator
+            typingIndicator.classList.remove('hidden');
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                // Hide typing indicator
+                typingIndicator.classList.add('hidden');
+                sendBtn.disabled = false;
+
+                if (response.ok) {
+                    addMessage(data.reply, 'bot');
+                } else {
+                    addMessage(data.detail || 'Sorry, something went wrong. Please try again.', 'bot');
+                }
+            } catch (error) {
+                typingIndicator.classList.add('hidden');
+                sendBtn.disabled = false;
+                addMessage('Connection error. Please check if the backend is running on port 8000.', 'bot');
+            }
+        });
+
+        function addMessage(text, role, scroll = true) {
+            // Remove welcome message if it exists
+            const welcomeMsg = chatMessages.querySelector('.welcome-message');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = role === 'user' ? '👤' : '🤖';
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = text;
+            
+            const time = document.createElement('div');
+            time.className = 'message-time';
+            time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            content.appendChild(bubble);
+            content.appendChild(time);
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+            
+            chatMessages.appendChild(messageDiv);
+            
+            if (scroll) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        function sendSuggestion(text) {
+            messageInput.value = text;
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+
+        async function clearChat() {
+            if (confirm('Are you sure you want to clear your chat history? This cannot be undone.')) {
+                try {
+                    await fetch(`${API_BASE_URL}/end`, { method: 'POST' });
+                } catch (error) {
+                    console.error('End chat call failed:', error);
+                }
+                chatMessages.innerHTML = `
+                    <div class="welcome-message">
+                        <div class="welcome-icon">🤗</div>
+                        <h3>Chat Cleared</h3>
+                        <p>Your chat history has been cleared. Start a new conversation!</p>
+                    </div>
+                `;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('mindfulchat_user_name');
+            localStorage.removeItem('mindfulchat_user_email');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

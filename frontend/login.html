@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MindfulChat</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <a href="index.html" class="back-link">← Back to Home</a>
+                <div class="auth-logo">
+                    <span class="logo">🧠</span>
+                    <h1>MindfulChat</h1>
+                </div>
+                <h2>Welcome Back</h2>
+                <p>Login to continue your wellness journey</p>
+            </div>
+
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="you@example.com"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Enter your password"
+                        required
+                    >
+                </div>
+
+                <div id="errorMessage" class="error-message"></div>
+
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span id="btnText">Login</span>
+                    <span id="btnLoader" class="loader hidden"></span>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="register.html">Register here</a></p>
+            </div>
+        </div>
+
+        <div class="auth-illustration">
+            <div class="illustration-content">
+                <h3>Continue Your Journey</h3>
+                <p>Access your conversations and pick up where you left off.</p>
+                <div class="stats">
+                    <div class="stat-item">
+                        <strong>24/7</strong>
+                        <span>Available</span>
+                    </div>
+                    <div class="stat-item">
+                        <strong>100%</strong>
+                        <span>Confidential</span>
+                    </div>
+                    <div class="stat-item">
+                        <strong>∞</strong>
+                        <span>Support</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        const loginForm = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const btnText = document.getElementById('btnText');
+        const btnLoader = document.getElementById('btnLoader');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Show loader
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+            errorMessage.textContent = '';
+
+            try {
+                // Validate backend availability and then continue as local demo login.
+                const ping = await fetch(`${API_BASE_URL}/`);
+                if (ping.ok) {
+                    localStorage.setItem('mindfulchat_user_email', email);
+                    localStorage.setItem('mindfulchat_user_name', email.split('@')[0] || 'User');
+                    window.location.href = 'chat.html';
+                } else {
+                    errorMessage.textContent = 'Backend is not available. Start the API server and try again.';
+                    btnText.classList.remove('hidden');
+                    btnLoader.classList.add('hidden');
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Connection error. Please start backend at http://127.0.0.1:8000.';
+                btnText.classList.remove('hidden');
+                btnLoader.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
